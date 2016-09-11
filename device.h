@@ -8,8 +8,7 @@
 #define UBNT_DEVICE_H
 #include <stdlib.h>
 #include <libssh/libssh.h>
-#include "../utils.h"
-#include "../openssh_id.h"
+#include "utils.h"
 #define CONNECTION_OK 0
 #define CONNECTION_ERROR -1
 #define CONNECTION_AGAIN -2
