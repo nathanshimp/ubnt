@@ -7,6 +7,7 @@
 #ifndef UBNT_DEVICE_H
 #define UBNT_DEVICE_H
 #include <stdlib.h>
+#include <string.h>
 #include <libssh/libssh.h>
 #include "utils.h"
 #define CONNECTION_OK 0
@@ -14,6 +15,8 @@
 #define CONNECTION_AGAIN -2
 #define CONNECTION_EOF -127
 #define TIMEOUT 30000
+#define CONFIG "/tmp/system.cfg"
+#define SCP_READ_SIZE 2048
 
 /**
  * Structure to contain device address, credentials and session (connection)
@@ -23,7 +26,6 @@ typedef struct UBNTDevice
     char *host;
     int port;
     char *username;
-    char *password;
     ssh_session session;
 } UBNTDevice;
 
@@ -370,5 +372,60 @@ int ubnt_is_connected(UBNTDevice *device)
 {
     // TODO make this not suck
     return !ssh_is_connected(device->session);
+}
+
+/**
+ * Copy configuration file through scp to buffer
+ *
+ * @param device UBNTDevice structure
+ * @param buffer char*
+ *
+ * Note: Ubiquiti busybox dropbear scp implementation only allows reads
+ * of 2048 bytes
+ *
+ * @returns size of file copied or -1 on error
+ */
+int ubnt_copy_config_to_buffer(UBNTDevice *device, char *buffer)
+{
+    int rc;
+    ssh_scp scp;
+
+    scp = ssh_scp_new(device->session, SSH_SCP_READ, CONFIG);
+    if (scp)
+    {
+        rc = ssh_scp_init(scp);
+        if (rc == CONNECTION_OK)
+        {
+            rc = ssh_scp_pull_request(scp);
+            if (rc == SSH_SCP_REQUEST_NEWFILE)
+            {
+                int i = 0;
+                int file_size = ssh_scp_request_get_size(scp);
+                int num_reads = (file_size / SCP_READ_SIZE) + 1;
+                char tmp_buffer[num_reads][SCP_READ_SIZE];
+                rc = 0; // reset rc for sum of bytes read
+
+                ssh_scp_accept_request(scp);
+                do
+                {
+                    rc += ssh_scp_read(scp, tmp_buffer[i], file_size);
+                    i++;
+                }
+                while (ssh_scp_pull_request(scp) != SSH_SCP_REQUEST_EOF
+                        && i < num_reads);
+
+                memcpy(buffer, *tmp_buffer, file_size);
+            }
+        }
+    }
+    else
+    {
+        rc = CONNECTION_ERROR;
+    }
+
+    ssh_scp_close(scp);
+    ssh_scp_free(scp);
+
+    return rc;
 }
 #endif
