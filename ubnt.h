@@ -1,15 +1,14 @@
 /**
- * @file device.h
+ * @file ubnt.h
  * @author Nathan Shimp
  * @brief Data structures and methods to connect and communicate
  * with Ubiquit Network Devices
  */
-#ifndef UBNT_DEVICE_H
-#define UBNT_DEVICE_H
+#ifndef UBNT_H
+#define UBNT_H
 #include <stdlib.h>
 #include <string.h>
 #include <libssh/libssh.h>
-#include "utils.h"
 #define CONNECTION_OK 0
 #define CONNECTION_ERROR -1
 #define CONNECTION_AGAIN -2
@@ -34,11 +33,14 @@ typedef struct UBNTDevice
  */
 enum UBNT_STATUS {UBNT_SUCCESS, UBNT_ERROR};
 
+void rstrip(char *str);
+char *strip(char *str);
+char *convert_port_to_string(int port);
 UBNTDevice *ubnt_init(char *host, int port, char *username);
 void ubnt_renew_session(UBNTDevice *device);
 int ubnt_connect_password(UBNTDevice *device, char *password);
 int ubnt_connect_key(UBNTDevice *device,
-		const char *publickey_file, const char *privatekey_file);
+const char *publickey_file, const char *privatekey_file);
 void ubnt_disconnect(UBNTDevice *device);
 char *ubnt_exec_command(UBNTDevice *device, char *command);
 char *ubnt_dispatch(char *host, int port, char *username, char *password, char *command);
